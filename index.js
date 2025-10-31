@@ -1,79 +1,71 @@
 const express = require('express')
+const cors = require('cors')
 const app = express()
-const port = 8080
+const port = 9000
 const swaggerUi = require('swagger-ui-express')
-const yamljs = require('js-yaml')
-const path = require('path')
+const yamljs = require('yamljs')
+const swaggerDocument = yamljs.load('./docs/swagger.yaml')
 
-app.use(express.json()) 
+app.use(cors())
+app.use(express.json())
 
-const swaggerDocument = yamljs.load(path.join(__dirname, 'docs', 'swagger.yaml'))
-
-// Начальные данные
-let games = [
-  { id: 1, name: "Witcher 3", price: 59.99 },
-  { id: 2, name: "Cyberpunk 2077", price: 49.99 },
-  { id: 3, name: "Minecraft", price: 19.99 },
-  { id: 4, name: "Counter-Strike", price: 0.00 },
-  { id: 5, name: "Roblox", price: 0.00 },
-  { id: 6, name: "GTA V", price: 29.99 },
-  { id: 7, name: "Valorant", price: 0.00 },
-  { id: 8, name: "Forza Horizon 5", price: 69.99 }
+const games = [
+    {id: 1, name: "Witcher 3", price: 29.99},
+    {id: 2, name: "Cyberpunk 2077", price: 59.99},
+    {id: 3, name: "Minecraft", price: 26.99},
+    {id: 4, name: "Counter-Strike: Global Offensive", price: 0},
+    {id: 5, name: "Roblox", price: 0},
+    {id: 6, name: "Grand Theft Auto V", price: 29.99},
+    {id: 7, name: "Valorant", price: 0},
+    {id: 8, name: "Forza Horizon 5", price: 59.99}
 ]
 
-// Получить все игры
 app.get('/games', (req, res) => {
-  res.json(games)
+    res.send(games)
 })
 
-// Получить игру по ID
 app.get('/games/:id', (req, res) => {
-  const id = parseInt(req.params.id)
-  const game = games.find(g => g.id === id)
+    if (typeof games[req.params.id - 1] === "undefined") {
+        return res.status(404).send({error: "Game not found"})
+    }
 
-  if (!game) {
-    return res.status(404).json({ error: "Game not found" })
-  }
-
-  res.json(game)
+    res.send(games[req.params.id - 1])
 })
 
-// Удалить игру по ID
-app.delete('/games/:id', (req, res) => {
-  const id = parseInt(req.params.id)
-  const index = games.findIndex(g => g.id === id)
-
-  if (index === -1) {
-    return res.status(404).json({ error: "Game not found" })
-  }
-
-  games.splice(index, 1)
-  res.status(204).send() // No content
-})
-
-// Добавить новую игру
 app.post('/games', (req, res) => {
-  const { name, price } = req.body
+    if (!req.body.name || !req.body.price) {
+        return res.status(400).send({error: 'One or all params are missing'})
+    }
+    let game = {
+        id: games.length + 1,
+        price: req.body.price,
+        name: req.body.name
+    }
 
-  if (!name) {
-    return res.status(400).json({ error: "Missing 'name' field" })
-  }
+    games.push(game)
 
-  // Генерация уникального ID
-  const newId = games.length > 0 ? Math.max(...games.map(g => g.id)) + 1 : 1
-  const newGame = { id: newId, name, price: price || 0 }
-
-  games.push(newGame)
-  res.status(201).json({ message: "Game added successfully", game: newGame })
+    res.status(201)
+        .location(`${getBaseUrl(req)}/games/${game.length}`)
+        .send(game)
 })
 
-// Swagger документация
+app.delete('/games/:id', (req, res) => {
+    if (typeof games[req.params.id - 1] === "undefined") {
+        return res.status(404).send({error: "Game not found"})
+    }
+    
+    games.splice(req.params.id - 1, 1)
+
+    res.status(204).send({error: "No content"})
+})
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
-// Запуск сервера
 app.listen(port, () => {
-  console.log(`API running at: http://localhost:${port}`)
+    console.log(`API up at: http://localhost:${port}`)
 })
 
-
-
+function getBaseUrl(req) {
+    return req.connection && req.connection.encrypted
+        ? 'https' : 'http' + `://${req.headers.host}`;
+}

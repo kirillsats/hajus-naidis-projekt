@@ -19,8 +19,11 @@
   "homepage": "https://github.com/kirillsats/hajus-naidis-projekt#readme",
   "description": "",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "js-yaml": "^4.1.0",
-    "swagger-ui-express": "^5.0.1"
+    "swagger": "^0.7.5",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
   }
 }
